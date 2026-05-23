@@ -35,9 +35,9 @@ def check_update():
 
 
     if version != available_version:
-        output_console.insert("end", f" Elérhető új Verzió\n")
+        output_console.insert("end", f" Elérhető új Verzió {available_version}\n")
     else: 
-        output_console.insert("end", f" Legfrissebb verzió telepítve\n")
+        output_console.insert("end", f" Legfrissebb verzió telepítve {available_version}\n")
         
     output_console.see("end")
 
