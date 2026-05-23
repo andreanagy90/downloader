@@ -1,3 +1,3 @@
-python3 -m pip show yt-dlp | grep Location
-python3 -c "import pkgutil; print([m.module_finder.path for m in pkgutil.iter_modules() if m.name=='yt_dlp'])"
-which -a yt-dlp
+please install requirement for txt file.
+as you run, you need copy paste video URL, select format, download, enjoy.
+If video download name exist, you need rename (otherwise dont downloaded again)
