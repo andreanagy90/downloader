@@ -173,7 +173,7 @@ wxPython==4.2.1
 X-Tile==3.3
 xdg==5
 xkit==0.0.0
-yt-dlp @ git+https://github.com/yt-dlp/yt-dlp.git@master
+
 zombie-imp==0.0.2
 zope.event==6.1
 zope.interface==8.1.1
