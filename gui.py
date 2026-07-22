@@ -12,6 +12,7 @@ WIDTH = 600
 HEIGHT = 800
 
 stop_flag = False
+restart_flag = False
 
 music_folder = "Musics"
 video_folder = "Videos"
@@ -64,23 +65,31 @@ def update_sh():
 
 
 def log(self,msg):
-    global rename_to
+    global rename_to, new_name, restart_flag
+
     if not msg:
         return
 
-    # ÚJ yt-dlp üzenet
-    if "exists, skipping" in msg:
-        output_console.insert("end", "A fájl már létezik " + msg + "\n")
-        output_console.see("end")
-
-        messagebox.showinfo("A fájl már létezik",msg)
+#    # ÚJ yt-dlp üzenet
+#    if "exists, skipping" in msg:
+#        output_console.insert("end", "A fájl már létezik " + msg + "\n")
+#        output_console.see("end")
+#
+#        messagebox.showinfo("A fájl már létezik",msg)
 
     # RÉGI yt-dlp üzenet
-    if "has already been downloaded" in msg:
+    if "exists, skipping" in msg or "has already been downloaded" in msg:
         output_console.insert("end", "A fájl már létezik" + msg + "\n")
         output_console.see("end")
 
-        messagebox.showinfo("A fájl már létezik",msg)
+        answer= messagebox.askyesno(title= "A fájl már létezik", message="A fájl már létezik, átnevezed az új fájlt?",icon= 'warning')
+
+        if answer:
+            restart_flag = True
+            window.after(0, ask_new_name)
+        if (answer == False):
+            output_console.insert("end", "A fájl nem lett letöltve" + msg + "\n")
+
 
     lower = msg.lower()
 
@@ -97,7 +106,7 @@ def open_video():
 
 
 def progress_hook(d):
-    global stop_flag
+    global stop_flag, new_name
 
 
     if stop_flag:
@@ -106,23 +115,67 @@ def progress_hook(d):
         raise yt_dlp.utils.DownloadError("Letöltés megszakítva a felhasználó által.") 
 
     if d['status'] == 'downloading':
-        output_console.insert("end", f"⬇️  Letöltés: {d['_percent_str']} ({d['_speed_str']})\n")
+        current_file = d.get('filename', None)
+
+        output_console.insert("end", f"⬇️  Letöltés: {current_file} \n {d['_percent_str']} ({d['_speed_str']})\n")
         output_console.see("end")
 
     elif d['status'] == 'finished':
-        output_console.insert("end", "✅ Letöltés kész.\n")
+        global restart_flag
+
+        output_console.insert("end", f"✅ Letöltés kész- {new_name} \n")
         output_console.see("end")
+
+        if restart_flag:
+            restart_flag = False
+            return
+
 
     elif d['status'] == 'error':
         output_console.insert("end", "❌ Hiba történt!\n")
         output_console.see("end")
 
+def ask_new_name():
+
+    popup = Toplevel(window)
+    popup.title("Átnevezés")
+    popup.geometry("300x150")
+    popup.config(bg="black")
+    popup.resizable(False, False)
+    popup.grab_set() # Fókusz ide 
+
+    Label(popup, text= "Add meg az új fájlnevet kiterjesztés nélkül",
+          fg="#1bd91b", bg="black").pack(pady=10)
+
+    entry = Entry(popup,fg="#1bd91b",bg="black",insertbackground="#1bd91b")
+    entry.pack(pady=5)
+    entry.focus()
+
+    def confirm_ok():
+        global rename_to, new_name, restart_flag
+        new_name = entry.get().strip()
+        if new_name:
+            rename_to = new_name
+            restart_flag = True
+        popup.destroy()
+        window.after(0,start_download)
+
+    Button(popup, text="OK", command=confirm_ok, fg="#1bd91b", bg= "green").pack(pady=10)
+
+    popup.bind("<Return>", lambda e: confirm_ok())
 
 def download_video(url):
+    global rename_to
+    outtmpl = f'{video_folder}/%(title)s.%(ext)s'
+
+    if rename_to:
+        outtmpl = f'{video_folder}/{rename_to}.%(ext)s'
+        rename_to = None
+
     ydl_opts = {
         'format': '((bv*[vcodec^=avc1]+ba[acodec^=mp4a])/bestvideo+bestaudio/best)',
         'merge_output_format': 'mp4',  # Átkonvertálás .mp4-re
-        'outtmpl': f'{video_folder}/%(title)s.%(ext)s',
+        'outtmpl': outtmpl,
         'verbose': True,
         'writesubtitles': False,        # Feliratok letöltése
         'writeautomaticsub': False,     # Automatikusan generált felirat is jöhet
@@ -139,10 +192,17 @@ def download_video(url):
         ydl.download([url])
 
 def download_video_low(url):
+    global rename_to
+    outtmpl = f'{video_folder}/%(title)s_low.%(ext)s'
+
+    if rename_to:
+        outtmpl = f'{video_folder}/{rename_to}.%(ext)s'
+        rename_to = None
+
     ydl_opts = {
         'format': '((bv*[vcodec^=avc1]+ba[acodec^=mp4a])/bestvideo+bestaudio/best)',
         'merge_output_format': 'mp4',  # Átkonvertálás .mp4-re
-        'outtmpl': f'{video_folder}/%(title)s.%(ext)s',
+        'outtmpl': outtmpl,
         'verbose': True,
         'writesubtitles': False,        # Feliratok letöltése
         'writeautomaticsub': False,     # Automatikusan generált felirat is jöhet
@@ -160,10 +220,17 @@ def download_video_low(url):
         ydl.download([url])
 
 def download_mp3(url):
+    global rename_to
+
+    outtmpl = f'{music_folder}/%(title)s.%(ext)s'
+
+    if rename_to:
+        outtmpl = f'{music_folder}/{rename_to}.%(ext)s'
+        rename_to = None
+
     ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
-       
-        'outtmpl': f'{music_folder}/%(title)s.%(ext)s',
+        'format': 'bestvideo+bestaudio/best',       
+        'outtmpl': outtmpl,
         'verbose': True,
         'postprocessors': [{
 		'key' : 'FFmpegExtractAudio',
@@ -211,7 +278,7 @@ def stop_download():
     output_console.see("end")
 
 def info():
-    infos = "Szoftververzió    : 1.0\nFejlesztve:        : 13/05/2026\nLast update:       : 13/05/2026\nSzerzői jogvédelem alatt!\nLoveQuinn - Fejlesztő\nE-mail:        andrea.nagy1990@icloud.com"
+    infos = "Szoftververzió    : 1.1\nFejlesztve:        : 22/07/2026\nLast update:       : 13/05/2026\nSzerzői jogvédelem alatt!\nLoveQuinn - Fejlesztő\nE-mail:        andrea.nagy1990@icloud.com"
     messagebox.showinfo(title= "Szoftverinformáció", message=infos)
 
 window = Tk()
@@ -254,12 +321,21 @@ title_label = Label(frame, text=title_art, font=("Courier", 8), fg="#1bd91b", bg
                     justify="left", anchor="nw")
 title_label.pack()
 
-url_text = Label(frame, text= " Enter or Paste ( Ctrl + V ) URL ", font=("Arial, 18"), fg= "#1bd91b", bg= "black", padx= 5, pady= 5)
+url_text = Label(frame, text= " Enter or Paste Video URL ", font=("Arial, 18"), fg= "#1bd91b", bg= "black", padx= 5, pady= 5)
 url_text.pack()
 
 
 url = Entry(frame, font=("Arial", 10), fg="#1bd91b", bg="black", width=250, insertbackground="#1bd91b")
 url.pack(padx= 10, pady= 10)
+
+url_menu = Menu(url, tearoff=0)
+url_menu.add_command(label= "Másolás", command=lambda: url.event_generate("<<Copy>>"))
+url_menu.add_command(label= "Beillesztés", command=lambda: url.event_generate("<<Paste>>"))
+url_menu.add_command(label= "Összes Kijelölés", command=lambda: url.event_generate("<<SelectAll>>"))
+url_menu.add_command(label= "Kivágás", command=lambda: url.event_generate("<<Cut>>"))
+
+
+url.bind("<Button-3>",lambda e: url_menu.tk_popup(e.x_root, e.y_root))
 
 f = IntVar()
 
