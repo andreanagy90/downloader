@@ -9,4 +9,4 @@ python3 -m pip install --upgrade --force-reinstall git+https://github.com/yt-dlp
 as you run, you need copy paste video URL, select format, download, enjoy.
 If video download name exist, rename option in new version
 
-WORK ONLY LINUX MINT YET
+WORK ONLY in LINUX MINT YET
